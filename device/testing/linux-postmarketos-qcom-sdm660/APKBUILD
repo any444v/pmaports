@@ -3,7 +3,7 @@ maintainer="Barnabas Czeman <barnabas.czeman@postmarketos.org>"
 _flavor="postmarketos-qcom-sdm660"
 pkgname=linux-$_flavor
 pkgver=7.2.15
-pkgrel=2
+pkgrel=3
 pkgdesc="Close to mainline linux kernel for Qualcomm Snapdragon 660 SoC"
 arch="aarch64"
 url="https://kernel.org/"
@@ -30,18 +30,19 @@ makedepends="
 	zstd
 	"
 
-_tag="v$pkgver-sdm660"
+# sdm660-mainline v$pkgver-sdm660 with the CPRh/OSM CPU frequency scaling
+# series and SDM636 (xiaomi-tulip) support, branch tulip-cpufreq of
+# https://github.com/any444v/linux
+_commit="51231b2ff10cee7763433e30e10dda6792b2b4d8"
 
 source="
-	linux-$_tag.tar.gz::https://github.com/sdm660-mainline/linux/archive/refs/tags/$_tag.tar.gz
+	linux-$_commit.tar.gz::https://github.com/any444v/linux/archive/$_commit.tar.gz
 	config-$_flavor.aarch64
 "
 
 _carch="arm64"
 
-# for some reason, the directory inside .tar.gz does not match tag name: leading
-#     "v" is missing, so we can't use $_tag here
-builddir="$srcdir/linux-$pkgver-sdm660"
+builddir="$srcdir/linux-$_commit"
 
 prepare() {
 	default_prepare
@@ -89,6 +90,6 @@ package() {
 }
 
 sha512sums="
-1b83198935d2496e86cce68aa5f3be9d44643590b8820cf89629eed6ee49f398ad250257482f132271353cd875b9404b12a6fc28a7e284cb53cf5a6e6faa95bb  linux-v7.2.15-sdm660.tar.gz
-5de35d9527ab5bd468c99e3e3df2f35c5ad5ed94946b6ba376fb81d5df761fdee2e3ef8b91dcee5bd2dd9ae12739f7de204ba0510706135c1a97c582d893bf14  config-postmarketos-qcom-sdm660.aarch64
+5877ea8a3c7ddb3131c94d426ddcd7a33e9916997c703c5dcbff36364b5bd25d0fc1fb5f547cb1cd133fe5cba0f054825820016fd371f6613108187248da5234  linux-51231b2ff10cee7763433e30e10dda6792b2b4d8.tar.gz
+cc49c9acdca70c7532639e297c7d5c0de333d7b1d2e7869a92bc627dd647eda102147b5e0a202177e8582c916d5045ae1a9214c75dc78a4f7290ff6d5053d3c8  config-postmarketos-qcom-sdm660.aarch64
 "
