@@ -2,7 +2,7 @@
 # profiles (xiaomi-tulip, PipeWire)
 pkgname=callaudiod
 pkgver=0.1.99
-pkgrel=2
+pkgrel=3
 pkgdesc="Daemon for dealing with audio routing during phone calls"
 url="https://gitlab.com/mobian1/callaudiod"
 arch="all"
@@ -11,6 +11,7 @@ makedepends="alsa-lib-dev appstream-dev glib-dev meson pulseaudio-dev"
 subpackages="$pkgname-dev $pkgname-libs"
 source="https://gitlab.com/mobian1/callaudiod/-/archive/$pkgver/callaudiod-$pkgver.tar.gz
 	0001-cad-pulse-switch-the-card-profile-to-enable-the-speaker.patch
+	0002-cad-pulse-apply-the-mic-state-to-new-sources.patch
 	"
 options="!check" # no tests
 
@@ -25,4 +26,5 @@ package() {
 sha512sums="
 8243189cae4ea2d37f7773eaaf1f66b80357ca2803adcaed3eb57f57fce80c13e0667f1be7bac00256318f2cc2f790c388f1d56496d22f34377c4d6a0b43e5c0  callaudiod-0.1.99.tar.gz
 3cae6b5466377e9fef84d8495ca4889b8c0af6650f93321a9b50205c9d4389c663d8469ce33a31b74195a407f6adaca2fe1a219e726ec1bb974a297b9c877d67  0001-cad-pulse-switch-the-card-profile-to-enable-the-speaker.patch
+eacf0075e7f86941645e3fe2437c8fd0bc3454c2598ba947f2669ba8ec0a21a6ddb4ebf76e31f57092db2884de7bed091db3b0db06a5c4712327d4af5fb51158  0002-cad-pulse-apply-the-mic-state-to-new-sources.patch
 "

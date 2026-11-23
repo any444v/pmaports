@@ -1,0 +1,34 @@
+From: any444v <162444641+any444v@users.noreply.github.com>
+Subject: [PATCH] cad-pulse: apply the mic state to new sources
+
+With UCM device-combination profiles every profile switch (call start,
+speaker on/off) brings a new source, and the audio server restores the
+mute state it saved for it. Hanging up while muted left the call source
+muted for the next call while callaudiod reported the mic as on. Apply
+the tracked mic state to a source when it appears.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+diff --git a/src/cad-pulse.c b/src/cad-pulse.c
+index 7a203e6..d0c1502 100644
+--- a/src/cad-pulse.c
++++ b/src/cad-pulse.c
+@@ -206,6 +206,18 @@ static void init_source_info(pa_context *ctx, const pa_source_info *info, int eo
+         else
+             self->mic_state = CALL_AUDIO_MIC_ON;
+         g_object_set(self->manager, "mic-state", self->mic_state, NULL);
++    } else if (!!info->mute != (self->mic_state == CALL_AUDIO_MIC_OFF)) {
++        /*
++         * A source that appears with a profile switch comes with the mute
++         * state the audio server restored for it, e.g. still muted from
++         * the end of the previous call. Apply the state we report.
++         */
++        g_debug("SOURCE: applying mic state %d", self->mic_state);
++        op = pa_context_set_source_mute_by_index(ctx, self->source_id,
++                                                 self->mic_state == CALL_AUDIO_MIC_OFF,
++                                                 NULL, NULL);
++        if (op)
++            pa_operation_unref(op);
+     }
+ 
+     target_port = get_available_source_port(info, NULL);
