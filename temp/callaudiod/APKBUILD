@@ -1,0 +1,28 @@
+# Forked from Alpine aports: speaker switching with UCM device-combination
+# profiles (xiaomi-tulip, PipeWire)
+pkgname=callaudiod
+pkgver=0.1.99
+pkgrel=1
+pkgdesc="Daemon for dealing with audio routing during phone calls"
+url="https://gitlab.com/mobian1/callaudiod"
+arch="all"
+license="GPL-3.0-or-later"
+makedepends="alsa-lib-dev appstream-dev glib-dev meson pulseaudio-dev"
+subpackages="$pkgname-dev $pkgname-libs"
+source="https://gitlab.com/mobian1/callaudiod/-/archive/$pkgver/callaudiod-$pkgver.tar.gz
+	0001-cad-pulse-switch-the-card-profile-to-enable-the-speaker.patch
+	"
+options="!check" # no tests
+
+build() {
+	abuild-meson . output
+	meson compile -C output
+}
+
+package() {
+	DESTDIR="$pkgdir" meson install --no-rebuild -C output
+}
+sha512sums="
+8243189cae4ea2d37f7773eaaf1f66b80357ca2803adcaed3eb57f57fce80c13e0667f1be7bac00256318f2cc2f790c388f1d56496d22f34377c4d6a0b43e5c0  callaudiod-0.1.99.tar.gz
+c3a0595cb2ddbee9414643378267845886701edd49eb0401f223f915b76b66f261c5210507887ddc05f66c235fc652d967799e51e4e01f447da837163903032d  0001-cad-pulse-switch-the-card-profile-to-enable-the-speaker.patch
+"

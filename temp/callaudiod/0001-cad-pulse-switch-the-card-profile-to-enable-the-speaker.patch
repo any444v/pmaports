@@ -1,0 +1,121 @@
+From: any444v <162444641+any444v@users.noreply.github.com>
+Subject: [PATCH] cad-pulse: switch the card profile to enable the speaker
+
+When the UCM devices of a card share a PCM, PipeWire (and PulseAudio
+>= 15) create one sink per device and a card profile per device
+combination ("Voice Call (Earpiece, Mic)", "Voice Call (Mic, Speaker)").
+The sink then has a single port and selecting the speaker port did
+nothing, so the speaker button of the phone app had no effect.
+
+If the current sink has no port of the wanted kind, switch to the best
+available profile of the same verb with such an output instead.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+diff --git a/src/cad-pulse.c b/src/cad-pulse.c
+index ba6f624..d49db6b 100644
+--- a/src/cad-pulse.c
++++ b/src/cad-pulse.c
+@@ -912,6 +912,86 @@ static void set_card_profile(pa_context *ctx, const pa_card_info *info, int eol,
+     }
+ }
+ 
++/*
++ * When the UCM devices of a card share a PCM, PipeWire (and PulseAudio >= 15)
++ * create one sink per device and a card profile per device combination,
++ * e.g. "Voice Call (Earpiece, Mic)" and "Voice Call (Mic, Speaker)". The sink
++ * then has a single port, so moving between speaker and earpiece means
++ * switching to the best available profile of the same verb that has the
++ * wanted kind of output.
++ */
++static gboolean sink_has_output(const pa_sink_info *info, gboolean speaker)
++{
++    guint i;
++
++    for (i = 0; i < info->n_ports; i++) {
++        gboolean is_speaker = info->ports[i]->type == PA_DEVICE_PORT_TYPE_SPEAKER;
++
++        if (is_speaker == speaker && info->ports[i]->available != PA_PORT_AVAILABLE_NO)
++            return TRUE;
++    }
++
++    return FALSE;
++}
++
++static void switch_output_profile(pa_context *ctx, const pa_card_info *info, int eol, void *data)
++{
++    CadPulseOperation *operation = data;
++    pa_operation *op = NULL;
++    const gchar *active;
++    const gchar *target = NULL;
++    guint32 target_priority = 0;
++    gsize verb_len;
++    guint i, j;
++
++    if (eol != 0)
++        return;
++
++    if (!info || !info->active_profile2) {
++        g_critical("PA returned no card info (eol=%d)", eol);
++        operation_complete_cb(ctx, 0, operation);
++        return;
++    }
++
++    active = info->active_profile2->name;
++    /* "Voice Call (Earpiece, Mic)" -> compare "Voice Call (" */
++    verb_len = strcspn(active, "(");
++
++    for (i = 0; i < info->n_ports; i++) {
++        pa_card_port_info *port = info->ports[i];
++        gboolean is_speaker = port->type == PA_DEVICE_PORT_TYPE_SPEAKER;
++
++        if (port->direction != PA_DIRECTION_OUTPUT ||
++            is_speaker != !!operation->value ||
++            port->available == PA_PORT_AVAILABLE_NO)
++            continue;
++
++        for (j = 0; j < port->n_profiles; j++) {
++            pa_card_profile_info2 *profile = port->profiles2[j];
++
++            if (!profile->available || strncmp(profile->name, active, verb_len) != 0)
++                continue;
++
++            if (!target || profile->priority > target_priority) {
++                target = profile->name;
++                target_priority = profile->priority;
++            }
++        }
++    }
++
++    if (target && g_strcmp0(target, active) != 0) {
++        g_debug("switching to profile '%s'", target);
++        op = pa_context_set_card_profile_by_index(ctx, operation->pulse->card_id,
++                                                  target,
++                                                  operation_complete_cb, operation);
++    }
++
++    if (op)
++        pa_operation_unref(op);
++    else
++        operation_complete_cb(ctx, target != NULL, operation);
++}
++
+ static void set_output_port(pa_context *ctx, const pa_sink_info *info, int eol, void *data)
+ {
+     CadPulseOperation *operation = data;
+@@ -942,6 +1022,15 @@ static void set_output_port(pa_context *ctx, const pa_sink_info *info, int eol,
+         else
+             target_port = get_available_sink_port(info, NULL);
+     } else {
++        if (!sink_has_output(info, !!operation->value)) {
++            op = pa_context_get_card_info_by_index(ctx, operation->pulse->card_id,
++                                                   switch_output_profile, operation);
++            if (op) {
++                pa_operation_unref(op);
++                return;
++            }
++        }
++
+         /*
+          * When forcing speaker output, we simply select the speaker port.
+          * When disabling speaker output, we want the highest priority port
