@@ -1,0 +1,28 @@
+# Contributor: any444v <162444641+any444v@users.noreply.github.com>
+# Maintainer: any444v <162444641+any444v@users.noreply.github.com>
+pkgname=reaver
+pkgver=1.6.6
+pkgrel=0
+pkgdesc="WPS brute-force and offline Pixie Dust attack tool (reaver-wps-fork-t6x)"
+url="https://github.com/t6x/reaver-wps-fork-t6x"
+arch="aarch64"
+license="GPL-2.0-or-later"
+makedepends="libpcap-dev linux-headers"
+source="$pkgname-$pkgver.tar.gz::https://github.com/t6x/reaver-wps-fork-t6x/archive/refs/tags/v$pkgver.tar.gz"
+builddir="$srcdir/reaver-wps-fork-t6x-$pkgver"
+options="!check"
+
+build() {
+	cd "$builddir/src"
+	./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var
+	make
+}
+
+package() {
+	cd "$builddir/src"
+	make DESTDIR="$pkgdir" install
+}
+
+sha512sums="
+431e3ed03eb6145a33a27bd03f4568c58046721566505f06bb0fe42ace8327d6749a70d443a592278253248f676299ff29962c839409d0173733eaaf0e2e6410  reaver-1.6.6.tar.gz
+"

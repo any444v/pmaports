@@ -1,0 +1,24 @@
+# Contributor: any444v <162444641+any444v@users.noreply.github.com>
+# Maintainer: any444v <162444641+any444v@users.noreply.github.com>
+pkgname=hcxdumptool
+pkgver=8.0.0
+pkgrel=0
+pkgdesc="Capture packets from WLAN devices for WPA/WPA2 auditing (PMKID/EAPOL)"
+url="https://github.com/ZerBea/hcxdumptool"
+arch="aarch64"
+license="MIT"
+makedepends="libpcap-dev linux-headers"
+source="https://github.com/ZerBea/hcxdumptool/releases/download/$pkgver/hcxdumptool-$pkgver.tar.gz"
+options="!check"
+
+build() {
+	make PREFIX=/usr
+}
+
+package() {
+	make PREFIX=/usr DESTDIR="$pkgdir" install
+}
+
+sha512sums="
+f1b9d03a4fa0f48e0ee305fd716a2a7df411e84d1e00a6bbfdfe9420ad077a8d51d33e9bd898635274ee7a9a94b395b09abcb29b7950f47577794951e0b9172b  hcxdumptool-8.0.0.tar.gz
+"

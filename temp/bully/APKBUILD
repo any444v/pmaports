@@ -1,0 +1,24 @@
+# Contributor: any444v <162444641+any444v@users.noreply.github.com>
+# Maintainer: any444v <162444641+any444v@users.noreply.github.com>
+pkgname=bully
+pkgver=1.2
+pkgrel=0
+pkgdesc="WPS brute-force attack tool (aanarchyy fork, internal crypto)"
+url="https://github.com/aanarchyy/bully"
+arch="aarch64"
+license="GPL-3.0-or-later"
+makedepends="libpcap-dev linux-headers"
+source="$pkgname-$pkgver.tar.gz::https://github.com/aanarchyy/bully/archive/refs/tags/$pkgver.tar.gz"
+options="!check"
+
+build() {
+	make -C "$builddir/src"
+}
+
+package() {
+	make -C "$builddir/src" install prefix=/usr DESTDIR="$pkgdir"
+}
+
+sha512sums="
+80f36153f44d2a2ce56d170160af9cb54a13e0b67f9b1e83f0fd533f159f9d241cfe7819b5ddf824dc43a46a89c9c43b9004a943f184bd62244943d030188888  bully-1.2.tar.gz
+"

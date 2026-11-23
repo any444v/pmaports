@@ -1,0 +1,24 @@
+# Contributor: any444v <162444641+any444v@users.noreply.github.com>
+# Maintainer: any444v <162444641+any444v@users.noreply.github.com>
+pkgname=hcxtools
+pkgver=8.0.0
+pkgrel=0
+pkgdesc="Portable WiFi dump conversion/analysis tools (provides hcxpcapngtool)"
+url="https://github.com/ZerBea/hcxtools"
+arch="aarch64"
+license="MIT"
+makedepends="openssl-dev curl-dev zlib-dev pkgconf"
+source="https://github.com/ZerBea/hcxtools/releases/download/$pkgver/hcxtools-$pkgver.tar.gz"
+options="!check"
+
+build() {
+	make PREFIX=/usr
+}
+
+package() {
+	make PREFIX=/usr DESTDIR="$pkgdir" install
+}
+
+sha512sums="
+418f74c5e9c24329138781a75d861f9737d963fc1934cdb9a201d07cdfbfb58f0743072ab779e7ab318f712c08613fb9789cf0d2a2a685a93b852dabacaac1fa  hcxtools-8.0.0.tar.gz
+"
