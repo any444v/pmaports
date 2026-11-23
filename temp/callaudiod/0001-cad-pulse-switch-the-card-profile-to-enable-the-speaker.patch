@@ -8,12 +8,14 @@ The sink then has a single port and selecting the speaker port did
 nothing, so the speaker button of the phone app had no effect.
 
 If the current sink has no port of the wanted kind, switch to the best
-available profile of the same verb with such an output instead.
+available profile of the same verb with such an output instead. Only do
+this for explicit requests: ending a call also turns the speaker off
+internally, which must not move the default profile to the earpiece.
 
 Assisted-by: Claude:claude-opus-5-5
 ---
 diff --git a/src/cad-pulse.c b/src/cad-pulse.c
-index ba6f624..d49db6b 100644
+index ba6f624..7a203e6 100644
 --- a/src/cad-pulse.c
 +++ b/src/cad-pulse.c
 @@ -912,6 +912,86 @@ static void set_card_profile(pa_context *ctx, const pa_card_info *info, int eol,
@@ -103,11 +105,17 @@ index ba6f624..d49db6b 100644
  static void set_output_port(pa_context *ctx, const pa_sink_info *info, int eol, void *data)
  {
      CadPulseOperation *operation = data;
-@@ -942,6 +1022,15 @@ static void set_output_port(pa_context *ctx, const pa_sink_info *info, int eol,
+@@ -942,6 +1022,21 @@ static void set_output_port(pa_context *ctx, const pa_sink_info *info, int eol,
          else
              target_port = get_available_sink_port(info, NULL);
      } else {
-+        if (!sink_has_output(info, !!operation->value)) {
++        /*
++         * Only for explicit requests (they carry a D-Bus reply callback):
++         * ending a call also turns the speaker off internally, which must
++         * not move the default profile away from the speaker.
++         */
++        if (operation->op && operation->op->callback &&
++            !sink_has_output(info, !!operation->value)) {
 +            op = pa_context_get_card_info_by_index(ctx, operation->pulse->card_id,
 +                                                   switch_output_profile, operation);
 +            if (op) {
