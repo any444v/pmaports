@@ -1,0 +1,146 @@
+From: any444v <162444641+any444v@users.noreply.github.com>
+Subject: [PATCH] Retry opening the PCMs while the call is active
+
+Opening (preparing) the voice PCMs fails while no back end is routed to
+the voice front end yet: ASoC DPCM refuses to prepare a front end without
+back ends. The routing is set by the audio server (callaudiod switching
+the UCM verb to "Voice Call") in response to the same ModemManager call
+state change that wakes up q6voiced, so on an incoming call q6voiced
+usually lost that race and the call stayed silent. Retry every 250 ms
+for up to 10 s while the call is active.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+diff --git a/q6voiced.c b/q6voiced.c
+index 072dd7f..d0c7c0e 100644
+--- a/q6voiced.c
++++ b/q6voiced.c
+@@ -8,12 +8,23 @@
+ struct q6voiced {
+ 	char card[64];
+ 	snd_pcm_t *tx, *rx;
++	/* Retries left to open the PCMs for an active call */
++	int pending;
+ };
+ 
+-static void q6voiced_open(struct q6voiced *v)
++/*
++ * Opening fails while no back end is routed to the voice front end yet
++ * (the DPCM prepare returns -EINVAL). The routing is set by the audio
++ * server (callaudiod switching the UCM verb) in response to the same call
++ * state change that wakes us up, so retry for a while.
++ */
++#define RETRY_INTERVAL_MS	250
++#define RETRY_COUNT		40
++
++static bool q6voiced_open(struct q6voiced *v, bool quiet)
+ {
+ 	if (v->tx)
+-		return; /* Already active */
++		return true; /* Already active */
+ 
+ 	/*
+ 	 * Opening the PCM devices starts the stream.
+@@ -22,18 +33,21 @@ static void q6voiced_open(struct q6voiced *v)
+ 	if (snd_pcm_open(&v->tx, v->card, SND_PCM_STREAM_CAPTURE, SND_PCM_NONBLOCK) < 0 ||
+ 	    snd_pcm_set_params(v->tx, SND_PCM_FORMAT_S16_LE, SND_PCM_ACCESS_RW_INTERLEAVED, 1, 8000, 0, 500000) < 0 ||
+ 	    snd_pcm_prepare(v->tx) < 0) {
+-		perror("Failed to open tx");
++		if (!quiet)
++			perror("Failed to open tx");
+ 		goto error;
+ 	}
+ 	if (snd_pcm_open(&v->rx, v->card, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK) < 0 ||
+ 	    snd_pcm_set_params(v->rx, SND_PCM_FORMAT_S16_LE, SND_PCM_ACCESS_RW_INTERLEAVED, 1, 8000, 0, 500000) < 0 ||
+ 	    snd_pcm_prepare(v->rx) < 0) {
+-		perror("Failed to open rx");
++		if (!quiet)
++			perror("Failed to open rx");
+ 		goto error;
+ 	}
+ 
+ 	printf("PCM devices were opened.\n");
+-	return;
++	fflush(stdout);
++	return true;
+ 
+ error:
+ 	if (v->tx) {
+@@ -44,10 +58,33 @@ error:
+ 		snd_pcm_close(v->rx);
+ 		v->rx = NULL;
+ 	}
++	return false;
++}
++
++static void q6voiced_start(struct q6voiced *v)
++{
++	if (q6voiced_open(v, false))
++		v->pending = 0;
++	else
++		v->pending = RETRY_COUNT;
++}
++
++static void q6voiced_retry(struct q6voiced *v)
++{
++	if (!v->pending)
++		return;
++
++	if (q6voiced_open(v, true)) {
++		v->pending = 0;
++	} else if (--v->pending == 0) {
++		fprintf(stderr, "Giving up opening the PCM devices\n");
++	}
+ }
+ 
+ static void q6voiced_close(struct q6voiced *v)
+ {
++	v->pending = 0;
++
+ 	if (!v->tx)
+ 		return; /* Not active */
+ 
+@@ -56,6 +93,7 @@ static void q6voiced_close(struct q6voiced *v)
+ 	v->rx = v->tx = NULL;
+ 
+ 	printf("PCM devices were closed.\n");
++	fflush(stdout);
+ }
+ 
+ /* See ModemManager-enums.h */
+@@ -86,7 +124,7 @@ static void handle_signal(struct q6voiced *v, DBusMessage *msg, DBusError *err)
+ 	// Check if the message is a signal from the correct interface and with the correct name
+ 	// TODO: Should we also check the call state for oFono?
+ 	if (dbus_message_is_signal(msg, "org.ofono.VoiceCallManager", "CallAdded")) {
+-		q6voiced_open(v);
++		q6voiced_start(v);
+ 	} else if (dbus_message_is_signal(msg, "org.ofono.VoiceCallManager", "CallRemoved")) {
+ 		q6voiced_close(v);
+ 	} else if (dbus_message_is_signal(msg, "org.freedesktop.ModemManager1.Call", "StateChanged")) {
+@@ -107,7 +145,7 @@ static void handle_signal(struct q6voiced *v, DBusMessage *msg, DBusError *err)
+ 			return; /* No change */
+ 
+ 		if (mm_state_is_active(new_state))
+-			q6voiced_open(v);
++			q6voiced_start(v);
+ 		else if (mm_state_is_active(old_state) && !mm_state_is_active(new_state))
+ 			q6voiced_close(v);
+ 	}
+@@ -152,7 +190,7 @@ int main(int argc, char **argv)
+ 	}
+ 
+ 	// Loop listening for signals being emmitted
+-	while (dbus_connection_read_write(conn, -1)) {
++	while (dbus_connection_read_write(conn, v.pending ? RETRY_INTERVAL_MS : -1)) {
+ 		// We need to process all received messages
+ 		while (msg = dbus_connection_pop_message(conn)) {
+ 			handle_signal(&v, msg, &err);
+@@ -163,6 +201,8 @@ int main(int argc, char **argv)
+ 
+ 			dbus_message_unref(msg);
+ 		}
++
++		q6voiced_retry(&v);
+ 	}
+ 
+ 	return 0;

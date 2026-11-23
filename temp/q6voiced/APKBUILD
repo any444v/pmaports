@@ -1,0 +1,27 @@
+# Forked from Alpine aports to retry opening the voice PCMs (xiaomi-tulip)
+pkgname=q6voiced
+pkgver=0.3.1
+pkgrel=2
+pkgdesc="Simple daemon that starts q6voice call audio on Qualcomm devices"
+url="https://gitlab.postmarketos.org/postmarketOS/q6voiced"
+arch="all"
+license="MIT"
+makedepends="alsa-lib-dev dbus-dev meson"
+subpackages="$pkgname-openrc"
+source="https://gitlab.postmarketos.org/postmarketOS/q6voiced/-/archive/$pkgver/q6voiced-$pkgver.tar.gz
+	0001-retry-opening-the-PCMs-while-the-call-is-active.patch
+	"
+options="!check" # no tests
+
+build() {
+	abuild-meson -Dsystemd=disabled . output
+	meson compile -C output
+}
+
+package() {
+	DESTDIR="$pkgdir" meson install --no-rebuild -C output
+}
+sha512sums="
+ab41adb9724747054b660794df7bcb73afb55f5ce086a5b3f9b1c8107048a7febb54a6e3415a47f01d2b715f9012a9508ca17a9f84b72061503d214b01b1bbb0  q6voiced-0.3.1.tar.gz
+6e710bd88fc1ae220d3e5cc3b9c6f20417af5a328ed04752c82904b7043489e0d8cc85c092a0760f7613de18a19371f1860b87ffa3c134e1dd9ed803b5fe7adc  0001-retry-opening-the-PCMs-while-the-call-is-active.patch
+"
