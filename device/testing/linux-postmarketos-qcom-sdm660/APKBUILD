@@ -3,7 +3,7 @@ maintainer="Barnabas Czeman <barnabas.czeman@postmarketos.org>"
 _flavor="postmarketos-qcom-sdm660"
 pkgname=linux-$_flavor
 pkgver=7.2.15
-pkgrel=10
+pkgrel=11
 pkgdesc="Close to mainline linux kernel for Qualcomm Snapdragon 660 SoC"
 arch="aarch64"
 url="https://kernel.org/"
@@ -33,7 +33,7 @@ makedepends="
 # sdm660-mainline v$pkgver-sdm660 with the CPRh/OSM CPU frequency scaling, micro-USB OTG
 # series and SDM636 (xiaomi-tulip) support, branch tulip-cpufreq of
 # https://github.com/any444v/linux
-_commit="2d97cb86b1dacd34c03294006480ad7407fe8961"
+_commit="7bdd7f212769dc44ced4fb6a6ce3c36d1192f337"
 
 source="
 	linux-$_commit.tar.gz::https://github.com/any444v/linux/archive/$_commit.tar.gz
@@ -90,6 +90,6 @@ package() {
 }
 
 sha512sums="
-846dec70033753bda8247b429efd0a86cc897a08c5310d4b7cd81cbb2e8205ffe9afc0bf7a70b746674ac2fdb412e88f0141f515ca31af947de0a25b330192d6  linux-2d97cb86b1dacd34c03294006480ad7407fe8961.tar.gz
+96d25f925ec2a8579a297434524cb3fe4eb0d875d8b600739032d2787be64fc650c452577fff6410b23dbf89fea60a48fc5ac29726ff29db24e2e7d9947e0754  linux-7bdd7f212769dc44ced4fb6a6ce3c36d1192f337.tar.gz
 d80c08194fbdcc89fc767908e53b9776cf4a630d30f0746af493d107e92148de34c0900c5c4183f064b02994648474fff53f0cb4997a27f97a5d87c383fbabd7  config-postmarketos-qcom-sdm660.aarch64
 "
